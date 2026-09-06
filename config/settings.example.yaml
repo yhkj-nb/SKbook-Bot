@@ -1,0 +1,39 @@
+# SkBookBot 框架全局配置
+
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 5200
+  web_secret_key: "change-me-to-a-random-string"
+
+# Web 管理面板
+web:
+  enabled: true
+  admin_password: "admin123"    # 管理员密码登录
+  session_expire: 86400         # 会话过期时间（秒）
+
+# OAuth2 配置（用于绑定 SkBook 社区账号）
+oauth2:
+  client_id: ""
+  client_secret: ""
+  redirect_uri: "http://localhost:5200/api/auth/oauth2/callback"
+
+# 日志配置
+logging:
+  level: "INFO"                 # DEBUG / INFO / WARNING / ERROR
+  file: "./data/logs/bot.log"
+  max_size: 10485760            # 10MB
+  backup_count: 5
+
+# 数据库配置
+database:
+  path: "./data/skbookbot.db"
+
+# 数据目录
+data_dir: "./data"
+
+# 后台服务
+services:
+  config_watcher: true          # 配置文件变更自动重载
+  media_cleanup: false          # 媒体文件清理（暂未使用）
+  message_cleanup_days: 30      # 消息记录保留天数

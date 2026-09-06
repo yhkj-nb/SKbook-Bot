@@ -1,0 +1,18 @@
+# SkBookBot 机器人配置示例
+# 可配置多个机器人实例
+
+bots:
+  - name: "我的机器人"           # 机器人名称
+    token: "your-bot-token-here"  # 机器人 TOKEN（应用设置页获取）
+    enabled: true                 # 是否启用
+    communities:                  # 监听的社区（留空则监听所有已加入社区）
+      # - "1234567890"
+    poll_interval: 3              # 轮询间隔（秒），用于获取消息
+    command_prefix: "/"           # 命令前缀
+
+  - name: "测试机器人"
+    token: "another-bot-token"
+    enabled: false
+    communities: []
+    poll_interval: 5
+    command_prefix: "/"
