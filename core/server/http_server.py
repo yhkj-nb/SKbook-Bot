@@ -7,6 +7,7 @@ import mimetypes
 from typing import Optional, Dict, Any
 from pathlib import Path
 
+import yaml
 from aiohttp import web
 
 from ..base.logger import logger
@@ -411,9 +412,13 @@ class HttpServer:
         # 返回脱敏后的配置
         cfg = {
             "server": {"host": config.get("server.host"), "port": config.get("server.port")},
-            "web": {"enabled": config.get("web.enabled", True)},
+            "web": {
+                "enabled": config.get("web.enabled", True),
+                "has_admin_password": bool(config.get("web.admin_password", "")),
+            },
             "oauth2": {
                 "client_id": config.get("oauth2.client_id", ""),
+                "client_secret": bool(config.get("oauth2.client_secret", "")),
                 "redirect_uri": config.get("oauth2.redirect_uri", ""),
             },
             "logging": {"level": config.get("logging.level", "INFO")},
@@ -421,11 +426,20 @@ class HttpServer:
                 "config_watcher": config.get("services.config_watcher", True),
                 "message_cleanup_days": config.get("services.message_cleanup_days", 30),
             },
+            "bots": [
+                {
+                    "name": b.get("name", ""),
+                    "token": b.get("token", "")[:8] + "****" if b.get("token") else "",
+                    "command_prefix": b.get("command_prefix", "/"),
+                    "poll_interval": b.get("poll_interval", 3),
+                }
+                for b in config.get_bots()
+            ],
         }
         return web.json_response({"success": True, "data": cfg})
 
     async def _handle_update_config(self, request: web.Request) -> web.Response:
-        """更新配置（简化实现）"""
+        """更新配置"""
         if not self._check_auth(request):
             return web.json_response({"success": False, "message": "未认证"}, status=401)
 
@@ -434,10 +448,24 @@ class HttpServer:
         except Exception:
             return web.json_response({"success": False, "message": "无效的请求数据"}, status=400)
 
+        allowed_keys = {
+            "logging.level", "services.message_cleanup_days", "services.config_watcher",
+            "server.port", "web.admin_password",
+            "oauth2.client_id", "oauth2.client_secret", "oauth2.redirect_uri",
+        }
         for key, value in body.items():
-            config.set(key, value)
+            if key in allowed_keys:
+                config.set(key, value)
 
-        return web.json_response({"success": True})
+        # 尝试保存到 YAML 文件
+        try:
+            config_path = config.config_dir / "settings.yaml" if config.config_dir else Path("settings.yaml")
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(config.data, f, allow_unicode=True, default_flow_style=False)
+        except Exception as e:
+            logger.warning(f"保存配置文件失败: {e}")
+
+        return web.json_response({"success": True, "message": "配置已更新"})
 
     # --- 仪表盘 ---
 
