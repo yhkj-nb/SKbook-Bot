@@ -62,6 +62,10 @@ class HttpServer:
         # 仪表盘
         self._app.router.add_get("/api/stats", self._handle_get_stats)
 
+        # 更新检查
+        self._app.router.add_get("/api/update/check", self._handle_update_check)
+        self._app.router.add_get("/api/update/version", self._handle_get_version)
+
         # 静态文件 + SPA 兜底（匹配所有非 API 的 GET 请求）
         self._web_dir = Path.cwd() / "web"
         self._app.router.add_get("/{tail:.*}", self._handle_static_or_spa)
@@ -461,6 +465,60 @@ class HttpServer:
             },
         }
         return web.json_response({"success": True, "data": stats})
+
+    # --- 更新检查 ---
+
+    CURRENT_VERSION = "v1.0.0"
+
+    async def _handle_update_check(self, request: web.Request) -> web.Response:
+        """检查框架更新"""
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    "https://api.github.com/repos/ElainaCore/SkBookBot/releases/latest",
+                    headers={"Accept": "application/vnd.github.v3+json"},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    latest = data.get("tag_name", "")
+                    has_update = latest != self.CURRENT_VERSION
+                    return web.json_response({
+                        "success": True,
+                        "data": {
+                            "has_update": has_update,
+                            "current_version": self.CURRENT_VERSION,
+                            "latest_version": latest,
+                            "release_time": data.get("published_at", ""),
+                            "release_notes": data.get("body", ""),
+                            "download_url": data.get("html_url", ""),
+                        }
+                    })
+        except Exception as e:
+            logger.warning(f"检查更新失败: {e}")
+
+        # 降级：返回当前版本信息
+        return web.json_response({
+            "success": True,
+            "data": {
+                "has_update": False,
+                "current_version": self.CURRENT_VERSION,
+                "latest_version": self.CURRENT_VERSION,
+                "release_time": "",
+                "release_notes": "",
+                "download_url": "",
+            }
+        })
+
+    async def _handle_get_version(self, request: web.Request) -> web.Response:
+        """获取当前版本"""
+        return web.json_response({
+            "success": True,
+            "data": {
+                "version": self.CURRENT_VERSION,
+                "update_time": "2026-01-01",
+            }
+        })
 
     # --- 静态文件 + SPA 兜底 ---
 

@@ -1,158 +1,133 @@
 import { defineStore } from 'pinia'
+import { ref } from 'vue'
 import { api } from '@/api'
 
-export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    token: localStorage.getItem('session_token') || '',
-    userInfo: null,
-    role: '',
-    checked: false,
-  }),
+export const useAuthStore = defineStore('auth', () => {
+  const token = ref(localStorage.getItem('session_token') || '')
+  const userInfo = ref(null)
+  const role = ref('')
+  const checked = ref(false)
 
-  getters: {
-    isAuthenticated: (state) => !!state.token,
-  },
+  const isAuthenticated = computed(() => !!token.value)
 
-  actions: {
-    async login(password) {
-      const res = await api.login(password)
-      if (res.success) {
-        this.token = res.data.token
-        this.role = res.data.role
-        localStorage.setItem('session_token', res.data.token)
-        return true
-      }
-      return false
-    },
+  async function login(password) {
+    const res = await api.login(password)
+    if (res.success) {
+      token.value = res.data.token
+      role.value = res.data.role
+      localStorage.setItem('session_token', res.data.token)
+      return true
+    }
+    return false
+  }
 
-    async oauth2Login() {
-      const res = await api.getOAuth2Url()
-      if (res.success) {
-        window.location.href = res.data.url
-      }
-    },
-
-    async handleOAuth2Callback(code, state) {
-      const res = await api.oauth2Callback(code, state)
-      if (res.success) {
-        this.token = res.data.token
-        this.userInfo = res.data.user_info
-        localStorage.setItem('session_token', res.data.token)
-        return true
-      }
-      return false
-    },
-
-    async checkAuth() {
-      this.checked = true
-      if (!this.token) return false
+  async function checkAuth() {
+    checked.value = true
+    if (!token.value) return false
+    try {
       const res = await api.checkAuth()
       if (res.success && res.data.authenticated) {
-        this.role = res.data.role
-        this.userInfo = res.data.user_info
+        role.value = res.data.role
+        userInfo.value = res.data.user_info
         return true
       }
-      this.logout()
-      return false
-    },
+    } catch {}
+    logout()
+    return false
+  }
 
-    logout() {
-      api.logout()
-      this.token = ''
-      this.userInfo = null
-      this.role = ''
-      localStorage.removeItem('session_token')
-    },
-  },
+  function logout() {
+    token.value = ''
+    userInfo.value = null
+    role.value = ''
+    localStorage.removeItem('session_token')
+  }
+
+  return { token, userInfo, role, checked, isAuthenticated, login, checkAuth, logout }
 })
 
-export const useBotStore = defineStore('bots', {
-  state: () => ({
-    bots: [],
-    loading: false,
-  }),
+import { computed } from 'vue'
 
-  actions: {
-    async fetchBots() {
-      this.loading = true
-      try {
-        const res = await api.getBots()
-        if (res.success) {
-          this.bots = res.data.bots
-        }
-      } finally {
-        this.loading = false
-      }
-    },
+export const useBotStore = defineStore('bots', () => {
+  const bots = ref([])
+  const loading = ref(false)
 
-    async createBot(data) {
-      const res = await api.createBot(data)
-      if (res.success) {
-        await this.fetchBots()
-      }
-      return res
-    },
+  async function fetchBots() {
+    loading.value = true
+    try {
+      const res = await api.getBots()
+      if (res.success) bots.value = res.data.bots
+    } finally { loading.value = false }
+  }
 
-    async deleteBot(name) {
-      const res = await api.deleteBot(name)
-      if (res.success) {
-        await this.fetchBots()
-      }
-      return res
-    },
+  async function createBot(data) {
+    const res = await api.createBot(data)
+    if (res.success) await fetchBots()
+    return res
+  }
 
-    async restartBot(name) {
-      return await api.restartBot(name)
-    },
-  },
+  async function deleteBot(name) {
+    const res = await api.deleteBot(name)
+    if (res.success) await fetchBots()
+    return res
+  }
+
+  async function restartBot(name) {
+    return await api.restartBot(name)
+  }
+
+  return { bots, loading, fetchBots, createBot, deleteBot, restartBot }
 })
 
-export const usePluginStore = defineStore('plugins', {
-  state: () => ({
-    plugins: [],
-    loading: false,
-  }),
+export const usePluginStore = defineStore('plugins', () => {
+  const plugins = ref([])
+  const loading = ref(false)
 
-  actions: {
-    async fetchPlugins() {
-      this.loading = true
-      try {
-        const res = await api.getPlugins()
-        if (res.success) {
-          this.plugins = res.data.plugins
-        }
-      } finally {
-        this.loading = false
-      }
-    },
+  async function fetchPlugins() {
+    loading.value = true
+    try {
+      const res = await api.getPlugins()
+      if (res.success) plugins.value = res.data.plugins
+    } finally { loading.value = false }
+  }
 
-    async reloadPlugin(name) {
-      const res = await api.reloadPlugin(name)
-      if (res.success) {
-        await this.fetchPlugins()
-      }
-      return res
-    },
-  },
+  async function reloadPlugin(name) {
+    const res = await api.reloadPlugin(name)
+    if (res.success) await fetchPlugins()
+    return res
+  }
+
+  return { plugins, loading, fetchPlugins, reloadPlugin }
 })
 
-export const useStatsStore = defineStore('stats', {
-  state: () => ({
-    stats: null,
-    loading: false,
-  }),
+export const useStatsStore = defineStore('stats', () => {
+  const stats = ref(null)
+  const loading = ref(false)
 
-  actions: {
-    async fetchStats() {
-      this.loading = true
-      try {
-        const res = await api.getStats()
-        if (res.success) {
-          this.stats = res.data
-        }
-      } finally {
-        this.loading = false
-      }
-    },
-  },
+  async function fetchStats() {
+    loading.value = true
+    try {
+      const res = await api.getStats()
+      if (res.success) stats.value = res.data
+    } finally { loading.value = false }
+  }
+
+  return { stats, loading, fetchStats }
+})
+
+export const useUpdateStore = defineStore('update', () => {
+  const checking = ref(false)
+  const updateInfo = ref(null)
+  const currentVersion = ref('v1.0.0')
+
+  async function checkUpdate() {
+    checking.value = true
+    try {
+      const res = await api.checkUpdate()
+      if (res.success) updateInfo.value = res.data
+    } catch { updateInfo.value = null }
+    finally { checking.value = false }
+  }
+
+  return { checking, updateInfo, currentVersion, checkUpdate }
 })

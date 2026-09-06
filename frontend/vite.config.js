@@ -5,18 +5,11 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue()],
   resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
+    alias: { '@': resolve(__dirname, 'src') },
   },
   server: {
     port: 5201,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5200',
-        changeOrigin: true,
-      },
-    },
+    proxy: { '/api': { target: 'http://localhost:5200', changeOrigin: true } },
   },
   build: {
     outDir: '../web',
