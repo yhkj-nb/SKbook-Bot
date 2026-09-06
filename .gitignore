@@ -9,8 +9,8 @@ venv/
 data/
 logs/
 
-# Web build
-web/
+# Web build (keep in repo so users can access panel without building)
+# web/
 
 # Node
 node_modules/

@@ -1,7 +1,9 @@
 """HttpServer - 基于 aiohttp 的 HTTP 服务器"""
 
 import json
+import os
 import secrets
+import mimetypes
 from typing import Optional, Dict, Any
 from pathlib import Path
 
@@ -27,7 +29,7 @@ class HttpServer:
         self._setup_routes()
 
     def _setup_routes(self) -> None:
-        """设置路由"""
+        """设置路由 - API 路由优先，静态文件/SPA 兜底在后"""
         # 认证
         self._app.router.add_post("/api/auth/login", self._handle_login)
         self._app.router.add_get("/api/auth/oauth2/url", self._handle_oauth2_url)
@@ -60,13 +62,9 @@ class HttpServer:
         # 仪表盘
         self._app.router.add_get("/api/stats", self._handle_get_stats)
 
-        # 静态文件（Vue 前端构建产物）
-        static_dir = Path.cwd() / "web"
-        if static_dir.exists():
-            self._app.router.add_static("/", str(static_dir), show_index=True)
-
-        # 前端路由兜底（SPA）
-        self._app.router.add_get("/{tail:.*}", self._handle_spa)
+        # 静态文件 + SPA 兜底（匹配所有非 API 的 GET 请求）
+        self._web_dir = Path.cwd() / "web"
+        self._app.router.add_get("/{tail:.*}", self._handle_static_or_spa)
 
     async def start(self) -> None:
         """启动 HTTP 服务器"""
@@ -464,8 +462,130 @@ class HttpServer:
         }
         return web.json_response({"success": True, "data": stats})
 
-    # --- SPA 兜底 ---
+    # --- 静态文件 + SPA 兜底 ---
 
-    async def _handle_spa(self, request: web.Request) -> web.Response:
-        """SPA 前端路由兜底"""
-        return web.FileResponse(Path.cwd() / "web" / "index.html")
+    async def _handle_static_or_spa(self, request: web.Request) -> web.Response:
+        """处理静态文件请求，未匹配到文件时返回 index.html（SPA 兜底）
+
+        路由匹配顺序: API 路由 > 静态文件 > index.html
+        """
+        # 只处理 GET/HEAD 请求
+        if request.method not in ("GET", "HEAD"):
+            return web.json_response({"error": "Method not allowed"}, status=405)
+
+        # 获取请求路径
+        tail = request.match_info.get("tail", "")
+        # 处理根路径
+        file_path = tail if tail else "index.html"
+
+        # 构建完整的文件路径
+        full_path = self._web_dir / file_path
+
+        # 防止目录遍历攻击
+        try:
+            full_path = full_path.resolve()
+            if not str(full_path).startswith(str(self._web_dir.resolve())):
+                return web.FileResponse(self._web_dir / "index.html")
+        except (ValueError, OSError):
+            return web.FileResponse(self._web_dir / "index.html")
+
+        # 如果文件存在，直接返回
+        if full_path.exists() and full_path.is_file():
+            content_type, _ = mimetypes.guess_type(str(full_path))
+            if content_type is None:
+                content_type = "application/octet-stream"
+            return web.FileResponse(full_path, headers={
+                "Content-Type": content_type,
+                "Cache-Control": "no-cache" if file_path == "index.html" else "public, max-age=3600",
+            })
+
+        # 如果文件不存在，返回 index.html（SPA 兜底）
+        index_path = self._web_dir / "index.html"
+        if index_path.exists():
+            return web.FileResponse(index_path)
+        else:
+            # 前端未构建时返回提示页面
+            html = self._get_fallback_html()
+            return web.Response(
+                text=html,
+                content_type="text/html",
+                charset="utf-8",
+            )
+
+    def _get_fallback_html(self) -> str:
+        """当 web/index.html 不存在时，返回内嵌的引导页面"""
+        return """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkBookBot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        h1 { font-size: 36px; margin-bottom: 12px; }
+        p { font-size: 16px; color: #94A3B8; margin-bottom: 8px; line-height: 1.8; }
+        .status {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 24px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 8px;
+            color: #60A5FA;
+            font-size: 14px;
+        }
+        .api-link {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 10px 20px;
+            background: #3B82F6;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .api-link:hover { background: #2563EB; }
+        .hint { margin-top: 24px; font-size: 13px; color: #64748B; }
+        code {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SkBookBot</h1>
+        <p>后端服务运行中</p>
+        <div class="status">✅ 服务器已启动</div>
+        <p style="margin-top: 20px;">
+            Web 管理面板前端未构建
+        </p>
+        <a class="api-link" href="/api/stats">查看 API 状态</a>
+        <p style="margin-top: 20px; font-size: 14px; color: #94A3B8;">
+            如需构建前端，请运行：
+        </p>
+        <p style="margin-top: 8px;">
+            <code>cd frontend && npm install && npm run build</code>
+        </p>
+        <div class="hint">
+            <p>API 端点: <code>/api/auth/check</code></p>
+            <p>查看日志: <code>python3 main.py</code></p>
+        </div>
+    </div>
+</body>
+</html>"""
