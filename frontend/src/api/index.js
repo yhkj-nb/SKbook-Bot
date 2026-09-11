@@ -45,6 +45,9 @@ export const api = {
   getPlugins: () => http.get('/plugins'),
   reloadPlugin: (n) => http.post(`/plugins/${n}/reload`),
 
+  // 认证扩展
+  updatePassword: (data) => http.post('/auth/password', data).then(r => r),
+
   // 配置
   getConfig: () => http.get('/config'),
   updateConfig: (d) => http.post('/config', d),
