@@ -105,6 +105,22 @@ const ICONS = {
   lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   // 服务器
   server: '<rect x="4" y="4" width="16" height="6.5" rx="3.25"/><rect x="4" y="13.5" width="16" height="6.5" rx="3.25"/><circle cx="8" cy="7.2" r="1" fill="currentColor" stroke="none"/><circle cx="8" cy="16.8" r="1" fill="currentColor" stroke="none"/>',
+  // 最小化
+  minimize: '<line x1="5" y1="12" x2="19" y2="12"/>',
+  // 最大化
+  maximize: '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+  // 添加
+  add: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  // 保存
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+  // 编辑
+  edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+  // 展开收起
+  expand_less: '<polyline points="18 15 12 9 6 15"/>',
+  // plugins 别名
+  plugins: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
+  // 播放
+  play: '<polygon points="5 3 19 12 5 21 5 3"/>',
 }
 
 const svgContent = ICONS[props.name] || ICONS.info

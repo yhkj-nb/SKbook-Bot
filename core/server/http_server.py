@@ -37,6 +37,7 @@ class HttpServer:
         self._app.router.add_get("/api/auth/oauth2/callback", self._handle_oauth2_callback)
         self._app.router.add_post("/api/auth/logout", self._handle_logout)
         self._app.router.add_get("/api/auth/check", self._handle_auth_check)
+        self._app.router.add_post("/api/auth/password", self._handle_change_password)
 
         # 机器人管理
         self._app.router.add_get("/api/bots", self._handle_get_bots)
@@ -202,6 +203,43 @@ class HttpServer:
             "success": True,
             "data": {"authenticated": False}
         })
+
+    async def _handle_change_password(self, request: web.Request) -> web.Response:
+        """修改管理员密码"""
+        session = self._check_auth(request)
+        if not session:
+            return web.json_response({"success": False, "message": "未认证"}, status=401)
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"success": False, "message": "无效的请求数据"}, status=400)
+
+        old_password = body.get("old_password", "")
+        new_password = body.get("new_password", "")
+
+        admin_password = config.get("web.admin_password", "")
+
+        if admin_password and old_password != admin_password:
+            return web.json_response({"success": False, "message": "当前密码不正确"}, status=400)
+
+        if not new_password:
+            return web.json_response({"success": False, "message": "新密码不能为空"}, status=400)
+
+        if len(new_password) < 6:
+            return web.json_response({"success": False, "message": "新密码至少 6 位"}, status=400)
+
+        config.set("web.admin_password", new_password)
+
+        # 写回配置文件
+        try:
+            config_path = config.config_dir / "settings.yaml" if config.config_dir else Path("settings.yaml")
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.dump(config.data, f, allow_unicode=True, default_flow_style=False)
+        except Exception as e:
+            logger.warning(f"保存配置文件失败: {e}")
+
+        return web.json_response({"success": True, "message": "密码已更新"})
 
     # --- 机器人管理 ---
 

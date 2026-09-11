@@ -1,390 +1,492 @@
-/* ===== SkBookBot Fluent Design System (WinUI 3 风格) ===== */
+/* ============================================================
+   SkBookBot — WinUI 3 / Fluent Design 设计系统
+   ============================================================ */
+
+/* ---- 设计令牌 ---- */
+:root {
+  --accent: #0078D4;
+  --accent-hover: #106EBE;
+  --accent-active: #005BA1;
+  --accent-soft: rgba(0, 120, 212, 0.08);
+
+  --radius-control: 4px;
+  --radius-card: 8px;
+  --radius-section: 7px;
+
+  --font: 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+  --fs-caption: 12px;
+  --fs-body: 14px;
+  --fs-subtitle: 20px;
+  --fs-title: 28px;
+
+  --nav-width: 260px;
+  --nav-collapsed: 48px;
+  --titlebar-height: 32px;
+}
+
+/* ---- 亮色 ---- */
+:root, [data-theme="light"] {
+  --bg: #F3F3F3;
+  --bg-panel: #FFFFFF;
+  --bg-deep: #EFEFEF;
+  --bg-hover: rgba(0,0,0,0.04);
+  --bg-selected: rgba(0,0,0,0.06);
+  --bg-acrylic: rgba(243,243,243,0.75);
+  --bg-mica: rgba(243,243,243,0.85);
+
+  --text: #1A1A1A;
+  --text-secondary: #616161;
+  --text-tertiary: #9E9E9E;
+  --text-muted: #C7C7C7;
+  --text-on-accent: #FFFFFF;
+
+  --border: rgba(0,0,0,0.08);
+  --border-hover: rgba(0,0,0,0.14);
+  --border-accent: #0078D4;
+
+  --danger: #C42B1C;
+  --danger-bg: rgba(196,43,28,0.08);
+  --success: #0F7B0F;
+  --success-bg: rgba(15,123,15,0.08);
+  --warning: #9D5B00;
+  --warning-bg: rgba(157,91,0,0.08);
+
+  --scrollbar-thumb: rgba(0,0,0,0.12);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.25);
+
+  --nav-bg: rgba(243,243,243,0.5);
+  --nav-hover: rgba(0,0,0,0.04);
+  --nav-selected: rgba(0,0,0,0.05);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
+
+  color-scheme: light;
+}
+
+/* ---- 暗色 ---- */
+[data-theme="dark"] {
+  --bg: #202020;
+  --bg-panel: #2B2B2B;
+  --bg-deep: #333333;
+  --bg-hover: rgba(255,255,255,0.06);
+  --bg-selected: rgba(255,255,255,0.08);
+  --bg-acrylic: rgba(32,32,32,0.75);
+  --bg-mica: rgba(32,32,32,0.85);
+
+  --text: #FFFFFF;
+  --text-secondary: #ABABAB;
+  --text-tertiary: #808080;
+  --text-muted: #5C5C5C;
+  --text-on-accent: #FFFFFF;
+
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.14);
+  --border-accent: #0078D4;
+
+  --danger: #F1706A;
+  --danger-bg: rgba(241,112,106,0.12);
+  --success: #6CC06C;
+  --success-bg: rgba(108,192,108,0.12);
+  --warning: #F5C76B;
+  --warning-bg: rgba(245,199,107,0.12);
+
+  --scrollbar-thumb: rgba(255,255,255,0.12);
+  --scrollbar-thumb-hover: rgba(255,255,255,0.25);
+
+  --nav-bg: rgba(32,32,32,0.5);
+  --nav-hover: rgba(255,255,255,0.06);
+  --nav-selected: rgba(255,255,255,0.07);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+
+  color-scheme: dark;
+}
+
+/* ---- 全局 ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 html, body, #app {
-  background: var(--bg);
+  height: 100%; overflow: hidden;
+  font-family: var(--font); font-size: var(--fs-body);
   color: var(--text);
-  min-height: 100vh;
-  font-family: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---- 滚动条 ---- */
+/* Mica 材质背景（body 层） */
+body {
+  background: var(--bg);
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--bg);
+  /* 噪点纹理叠加 */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+[data-theme="dark"] body::before {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- 滚动条（WinUI 3 细条） ---- */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(120,130,150,0.2); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(120,130,150,0.35); }
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+  transition: width .15s, background .15s;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  width: 10px;
+}
+::-webkit-scrollbar-corner { background: transparent; }
 
-/* ---- 卡片 (Fluent Card) ---- */
-.ui-card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: var(--shadow-sm);
+/* ---- 焦点指示器（WinUI 3 风格） ---- */
+:focus-visible {
+  outline: 1px dashed var(--text-tertiary);
+  outline-offset: 2px;
 }
-.ui-card-pad { padding: 20px 24px; }
 
-/* ---- 页面头部 (Fluent CommandBar 风格) ---- */
-.ui-page-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.ui-page-head-main {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-  min-width: 0;
-}
-.ui-page-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-  background: var(--accent-soft);
-  backdrop-filter: blur(8px);
-}
-.ui-page-title {
-  font-size: 22px;
-  font-weight: 650;
+/* ============================================================
+   WinUI 3 组件
+   ============================================================ */
+
+/* ---- 页面标题 ---- */
+.win-page-title {
+  font-size: var(--fs-title);
+  font-weight: 600;
   color: var(--text);
   line-height: 1.2;
-  margin: 0;
-  letter-spacing: -0.3px;
+  margin-bottom: 4px;
 }
-.ui-page-sub {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-.ui-page-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  padding: 4px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-/* ---- 区块标题 (Fluent Section) ---- */
-.ui-sec-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 16px;
-}
-.ui-sec-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.ui-sec-title {
-  font-size: 15px;
-  font-weight: 650;
-  color: var(--text);
-}
-.ui-sec-extra {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ---- 统计卡片 (Fluent Stats) ---- */
-.ui-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+.win-page-subtitle {
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
   margin-bottom: 24px;
 }
-.ui-stat {
-  position: relative;
+
+/* ---- 卡片 ---- */
+.win-card {
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 18px 20px;
-  overflow: hidden;
-  transition: transform .12s, box-shadow .12s;
+  border-radius: var(--radius-card);
+  transition: box-shadow .12s, transform .12s;
 }
-.ui-stat:hover {
+.win-card-pad { padding: 16px 20px; }
+.win-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- 统计卡片 ---- */
+.win-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.win-stat {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  transition: box-shadow .12s, transform .12s;
+}
+.win-stat:hover {
+  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-hover);
 }
-.ui-stat-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+.win-stat-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-control);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent); background: var(--accent-soft);
+  margin-bottom: 10px;
 }
-.ui-stat-ic {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.ui-stat-label {
-  font-size: 13px;
+.win-stat-icon.c-green { color: var(--success); background: var(--success-bg); }
+.win-stat-icon.c-red { color: var(--danger); background: var(--danger-bg); }
+.win-stat-icon.c-orange { color: #D97706; background: rgba(217,119,6,0.12); }
+.win-stat-icon.c-purple { color: #7C3AED; background: rgba(124,58,237,0.12); }
+.win-stat-icon.c-teal { color: #0D9488; background: rgba(13,148,136,0.12); }
+.win-stat-label {
+  font-size: var(--fs-caption);
   color: var(--text-secondary);
-  font-weight: 500;
+  margin-bottom: 6px;
 }
-.ui-stat-val {
-  font-size: 28px;
-  font-weight: 700;
+.win-stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text);
   line-height: 1;
-  letter-spacing: -0.5px;
 }
-/* 颜色变体 */
-.c-blue   { --cc: #3b7bf7; --cb: rgba(59,123,247,.12); }
-.c-green  { --cc: #22c55e; --cb: rgba(34,197,94,.12); }
-.c-red    { --cc: #ef4444; --cb: rgba(239,68,68,.12); }
-.c-purple { --cc: #8b5cf6; --cb: rgba(139,92,246,.12); }
-.c-orange { --cc: #f59e0b; --cb: rgba(245,158,11,.14); }
-.c-teal   { --cc: #14b8a6; --cb: rgba(20,184,166,.12); }
-.c-pink   { --cc: #ec4899; --cb: rgba(236,72,153,.12); }
-.c-cyan   { --cc: #06b6d4; --cb: rgba(6,182,212,.12); }
-.ui-stat .ui-stat-ic { color: var(--cc); background: var(--cb); }
-.ui-stat .ui-stat-val { color: var(--cc); }
-.ui-stat-bg {
-  position: absolute;
-  right: -6px;
-  bottom: -12px;
-  color: var(--cc);
-  opacity: .06;
-  pointer-events: none;
+.win-stat-unit {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  font-weight: 400;
+  margin-left: 2px;
 }
 
-/* ---- 胶囊标签 (Fluent Pills) ---- */
-.ui-pills { display: flex; gap: 4px; flex-wrap: wrap; }
-.ui-pill {
-  padding: 6px 16px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
+/* ---- 章节标题 ---- */
+.win-section-title {
+  font-size: var(--fs-subtitle);
   font-weight: 600;
-  cursor: pointer;
-  transition: all .12s;
-  white-space: nowrap;
-}
-.ui-pill:hover { background: var(--bg-deep); color: var(--text); }
-.ui-pill.active {
-  background: var(--accent);
-  color: #fff;
-}
-.ui-pill-ghost {
-  background: var(--bg-deep);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-}
-.ui-pill-ghost:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ---- 徽标 (Fluent Badge) ---- */
-.ui-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 20px;
-}
-.ui-badge-success { background: rgba(34,197,94,0.12); color: #16a34a; }
-.ui-badge-danger { background: rgba(239,68,68,0.12); color: #dc2626; }
-.ui-badge-warning { background: rgba(245,158,11,0.14); color: #d97706; }
-.ui-badge-info { background: var(--accent-soft); color: var(--accent); }
-.ui-badge-ghost { background: var(--bg-deep); color: var(--text-muted); }
-
-/* ---- 空状态 ---- */
-.ui-empty {
-  text-align: center;
-  padding: 48px 20px;
-  color: var(--text-muted);
-}
-.ui-empty svg { margin-bottom: 12px; opacity: 0.35; }
-.ui-empty p { font-size: 14px; }
-
-/* ---- 加载状态 ---- */
-.ui-loading {
-  text-align: center;
-  padding: 48px;
-  color: var(--text-muted);
-  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 16px;
 }
 
-/* ---- 按钮 (Fluent Button) ---- */
-.ui-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 18px;
-  height: 34px;
-  border-radius: 6px;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background .12s, transform .08s;
-  white-space: nowrap;
+/* ---- 按钮 ---- */
+.win-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; height: 32px; padding: 0 16px;
+  border-radius: var(--radius-control);
+  border: none; font-family: inherit; font-size: var(--fs-body); font-weight: 500;
+  cursor: pointer; user-select: none; white-space: nowrap; text-decoration: none;
+  transition: background .1s, transform .08s;
 }
-.ui-btn:hover { background: var(--accent-hover); }
-.ui-btn:active { transform: scale(0.97); }
-.ui-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
-.ui-btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-}
-.ui-btn-ghost:hover { background: var(--bg-deep); color: var(--text); }
-.ui-btn-sm { padding: 4px 12px; height: 28px; font-size: 12px; }
-.ui-btn-danger { background: var(--danger); }
-.ui-btn-danger:hover { background: #dc2626; }
-.ui-btn-success { background: var(--success); }
-.ui-btn-success:hover { background: #16a34a; }
+.win-btn:active { transform: scale(0.97); }
+.win-btn:disabled { opacity: 0.35; cursor: default; transform: none; }
 
-/* ---- 输入框 (Fluent TextBox) ---- */
-.ui-input {
-  width: 100%;
-  padding: 7px 12px;
-  border-radius: 6px;
+.win-btn-primary { background: var(--accent); color: var(--text-on-accent); }
+.win-btn-primary:hover { background: var(--accent-hover); }
+.win-btn-primary:active { background: var(--accent-active); }
+
+.win-btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.win-btn-secondary:hover { background: var(--bg-hover); border-color: var(--border-hover); }
+
+.win-btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(196,43,28,0.3); }
+.win-btn-danger:hover { background: var(--danger-bg); }
+
+.win-btn-text { background: transparent; color: var(--text-secondary); padding: 0 8px; }
+.win-btn-text:hover { background: var(--bg-hover); }
+
+.win-btn-sm { height: 28px; padding: 0 12px; font-size: var(--fs-caption); }
+
+/* ---- 输入框 ---- */
+.win-textbox {
+  display: block; width: 100%; height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--border);
   background: var(--bg-panel);
   color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
+  font-family: inherit; font-size: var(--fs-body);
   outline: none;
-  transition: border-color .12s, box-shadow .12s;
+  transition: border-color .1s;
 }
-.ui-input:focus {
+.win-textbox:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-bottom-width: 2px;
+  padding-bottom: 0;
 }
-.ui-input::placeholder { color: var(--text-muted); }
-.ui-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.win-textbox:disabled { opacity: 0.5; cursor: not-allowed; }
+.win-textbox::placeholder { color: var(--text-tertiary); }
+.win-textbox-label {
+  display: block; font-size: var(--fs-caption);
+  color: var(--text-secondary); font-weight: 500;
+  margin-bottom: 6px;
 }
-.ui-input-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.win-textbox-hint {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  margin-top: 4px;
 }
-.ui-input-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
+.win-textbox-group { display: flex; flex-direction: column; gap: 4px; }
+
+.win-textarea {
+  display: block; width: 100%; min-height: 80px;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-family: inherit; font-size: var(--fs-body);
+  outline: none; resize: vertical;
+  transition: border-color .1s;
+}
+.win-textarea:focus {
+  border-color: var(--accent);
+  border-bottom-width: 2px;
 }
 
-/* ---- 开关 (Fluent ToggleSwitch) ---- */
-.ui-toggle {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  user-select: none;
+/* ---- 下拉框 ---- */
+.win-select {
+  display: block; width: 100%; height: 32px;
+  padding: 0 32px 0 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-family: inherit; font-size: var(--fs-body);
+  outline: none; cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%23616161'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color .1s;
 }
-.ui-toggle input { display: none; }
-.ui-toggle-track {
-  width: 40px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--border);
-  transition: background .2s;
-  position: relative;
-  flex-shrink: 0;
+[data-theme="dark"] .win-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='%23ABABAB'/%3E%3C/svg%3E");
 }
-.ui-toggle-track::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+.win-select:focus { border-color: var(--accent); }
+
+/* ---- 开关 ---- */
+.win-toggle {
+  position: relative; display: inline-flex; align-items: center;
+  gap: 10px; cursor: pointer; user-select: none;
+}
+.win-toggle input { display: none; }
+.win-toggle-track {
+  width: 40px; height: 20px; border-radius: 10px;
+  background: rgba(0,0,0,0.18);
+  transition: background .18s;
+  position: relative; flex-shrink: 0;
+}
+[data-theme="dark"] .win-toggle-track { background: rgba(255,255,255,0.18); }
+.win-toggle-track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
   background: #fff;
-  transition: transform .2s;
+  transition: transform .18s;
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
-.ui-toggle input:checked + .ui-toggle-track {
-  background: var(--accent);
+.win-toggle input:checked + .win-toggle-track { background: var(--accent); }
+.win-toggle input:checked + .win-toggle-track::after { transform: translateX(20px); }
+.win-toggle-label { font-size: var(--fs-body); color: var(--text); }
+
+/* ---- 徽标 ---- */
+.win-badge {
+  display: inline-flex; align-items: center;
+  padding: 0 10px; height: 22px;
+  border-radius: 3px;
+  font-size: var(--fs-caption); font-weight: 500;
+  white-space: nowrap;
 }
-.ui-toggle input:checked + .ui-toggle-track::after {
-  transform: translateX(20px);
+.win-badge-success { background: var(--success-bg); color: var(--success); }
+.win-badge-danger { background: var(--danger-bg); color: var(--danger); }
+.win-badge-warning { background: var(--warning-bg); color: var(--warning); }
+.win-badge-info { background: var(--accent-soft); color: var(--accent); }
+.win-badge-ghost { background: var(--bg-deep); color: var(--text-tertiary); }
+
+/* ---- 代码 ---- */
+.win-code {
+  background: var(--bg-deep);
+  padding: 2px 6px; border-radius: var(--radius-control);
+  font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  font-size: var(--fs-caption); color: var(--text-secondary);
 }
-.ui-toggle-label {
-  font-size: 13px;
-  color: var(--text);
+
+/* ---- 空状态 ---- */
+.win-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 24px;
+  color: var(--text-tertiary); text-align: center;
 }
+
+/* ---- 加载 ---- */
+@keyframes win-spin { to { transform: rotate(360deg); } }
+.win-ring {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: win-spin .8s linear infinite;
+}
+.win-loading {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 64px 24px; gap: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ---- 列表 ---- */
+.win-list { display: flex; flex-direction: column; }
+.win-list-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 16px; min-height: 44px;
+  background: transparent;
+  cursor: default;
+  transition: background .1s;
+}
+.win-list-item:hover { background: var(--bg-hover); }
+.win-list-item-content { flex: 1; min-width: 0; }
+.win-list-item-title { font-size: var(--fs-body); font-weight: 500; color: var(--text); }
+.win-list-item-sub { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 2px; }
 
 /* ---- 分隔线 ---- */
-.ui-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 20px 0;
-  border: none;
+.win-divider { height: 1px; background: var(--border); border: none; margin: 12px 0; }
+
+/* ---- 信息条 ---- */
+.win-infobar {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--radius-control);
+  margin-bottom: 16px;
+  font-size: var(--fs-body);
+  backdrop-filter: blur(10px);
 }
+.win-infobar-info { background: var(--bg-acrylic); border: 1px solid var(--border-accent); }
+.win-infobar-success { background: var(--success-bg); border: 1px solid rgba(15,123,15,0.18); }
+.win-infobar-warning { background: var(--warning-bg); border: 1px solid rgba(157,91,0,0.18); }
+.win-infobar-danger { background: var(--danger-bg); border: 1px solid rgba(196,43,28,0.18); }
 
 /* ---- 配置网格 ---- */
-.ui-config-grid {
+.win-config-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-.ui-config-full {
-  grid-column: 1 / -1;
-}
-.ui-config-card {
-  padding: 16px 20px;
-  background: var(--bg-deep);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-.ui-config-card-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
+.win-config-full { grid-column: 1 / -1; }
 
-/* Fluent 响应式 */
+/* ---- 对话框 ---- */
+.win-dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.win-dialog {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  min-width: 360px; max-width: 480px;
+  animation: win-dialog-in .15s ease;
+}
+@keyframes win-dialog-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.win-dialog-title { font-size: var(--fs-subtitle); font-weight: 600; padding: 24px 24px 0; }
+.win-dialog-body { padding: 16px 24px; font-size: var(--fs-body); color: var(--text-secondary); line-height: 1.5; }
+.win-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 24px; }
+
+/* ---- 页面过渡 ---- */
+.win-fade-enter-active, .win-fade-leave-active { transition: opacity .12s ease; }
+.win-fade-enter-from, .win-fade-leave-to { opacity: 0; }
+
+/* ---- 响应式 ---- */
 @media (max-width: 1200px) {
-  .ui-stat-grid { grid-template-columns: repeat(3, 1fr); }
-  .ui-config-grid { grid-template-columns: 1fr; }
+  .win-stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .win-config-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 767px) {
-  .ui-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .ui-stat { padding: 14px 16px; }
-  .ui-stat-val { font-size: 22px; }
-  .ui-page-title { font-size: 19px; }
-  .ui-page-head { gap: 10px; }
-  .ui-page-icon { width: 38px; height: 38px; }
-  .ui-page-sub { font-size: 12px; }
+  .win-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .win-page-title { font-size: 24px; }
 }
