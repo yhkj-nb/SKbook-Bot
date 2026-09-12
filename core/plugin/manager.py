@@ -2,9 +2,9 @@
 
 import os
 import sys
-import importlib
+import importlib.util
 import asyncio
-from typing import Dict, Optional, List, Callable, Any
+from typing import Dict, Optional, List, Callable, Any, Tuple
 from pathlib import Path
 from ..base.logger import logger
 from ..base.config import config
@@ -34,17 +34,15 @@ class PluginManager:
         return self._plugins
 
     def get_plugin_dirs(self) -> List[Path]:
-        """获取插件目录列表"""
+        """获取插件目录列表
+
+        只扫描 plugins/ 根目录，其下的子目录 / .py 文件均作为独立插件加载。
+        plugins/system/ 作为 system 子目录会自动发现，无需额外添加。
+        """
         if not self._plugin_dirs:
-            # 默认插件目录
             base_dir = Path.cwd() / "plugins"
             if base_dir.exists():
                 self._plugin_dirs.append(base_dir)
-
-            # 系统插件目录
-            sys_dir = base_dir / "system"
-            if sys_dir.exists():
-                self._plugin_dirs.append(sys_dir)
         return self._plugin_dirs
 
     async def load_plugins(self) -> None:
@@ -54,11 +52,15 @@ class PluginManager:
             await self._load_plugins_from_dir(plugin_dir)
 
     async def _load_plugins_from_dir(self, plugin_dir: Path) -> None:
-        """从目录加载插件"""
+        """从目录加载插件
+
+        - 子目录含 main.py → 以目录名作为插件名
+        - 独立 .py 文件（非 __init__） → 以文件名（不含后缀）作为插件名
+        """
         if not plugin_dir.exists():
             return
 
-        for item in plugin_dir.iterdir():
+        for item in sorted(plugin_dir.iterdir()):
             if item.is_dir() and (item / "main.py").exists():
                 await self._load_plugin(item.name, str(item / "main.py"))
             elif item.is_file() and item.suffix == ".py" and item.name != "__init__.py":
@@ -67,69 +69,80 @@ class PluginManager:
     async def _load_plugin(self, name: str, file_path: str) -> None:
         """加载单个插件"""
         if name in self._plugins:
-            logger.debug(f"插件 [{name}] 已加载，跳过")
+            logger.debug("插件 [%s] 已加载，跳过", name)
             return
 
         try:
-            # 将插件目录加入 sys.path
+            # 将插件所在目录加入 sys.path（支持相对导入）
             file_path_obj = Path(file_path)
             plugin_dir = str(file_path_obj.parent)
             if plugin_dir not in sys.path:
                 sys.path.insert(0, plugin_dir)
 
-            # 动态导入
+            # 动态导入模块
             spec = importlib.util.spec_from_file_location(f"plugin_{name}", file_path)
             if not spec or not spec.loader:
-                logger.error(f"插件 [{name}] 加载失败: 无法创建 spec")
+                logger.error("插件 [%s] 加载失败: 无法创建 spec", name)
                 return
 
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
-            # 查找插件实例
+            # 查找所有顶层函数 / 类上的处理器
+            handlers: List[Tuple[Callable, dict]] = []
             plugin_instance = None
-            handlers = []
 
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if isinstance(attr, type):
-                    # 检查是否是插件类（有 _skbook_handlers 或继承 PluginBase）
-                    if hasattr(attr, "_skbook_handlers"):
+                if not callable(attr):
+                    continue
+
+                # 检查是否是被装饰的函数（有 _skbook_handlers）
+                if hasattr(attr, "_skbook_handlers"):
+                    for handler_meta in getattr(attr, "_skbook_handlers"):
+                        handlers.append((attr, handler_meta))
+
+                # 检查是否是插件类（有 _skbook_handlers 类属性或 _is_skbook_plugin）
+                if isinstance(attr, type) and hasattr(attr, "_skbook_handlers"):
+                    try:
                         instance = attr()
                         instance.ctx = PluginContext(name)
                         plugin_instance = instance
+                        # 从类属性中解析类方法处理器
                         for handler_meta in getattr(attr, "_skbook_handlers", []):
                             handler_func = getattr(instance, handler_meta.get("name", ""), None)
                             if handler_func:
                                 handlers.append((handler_func, handler_meta))
-                    elif hasattr(attr, "_is_skbook_plugin"):
+                    except Exception as e:
+                        logger.debug("插件 [%s] 类实例化失败: %s", name, e)
+
+                if isinstance(attr, type) and hasattr(attr, "_is_skbook_plugin"):
+                    try:
                         instance = attr()
                         instance.ctx = PluginContext(name)
                         plugin_instance = instance
+                    except Exception as e:
+                        logger.debug("插件 [%s] 类实例化失败: %s", name, e)
 
-            if plugin_instance is None:
-                # 查找所有顶层函数 handler
-                for attr_name in dir(module):
-                    attr = getattr(module, attr_name)
-                    if callable(attr) and hasattr(attr, "_skbook_handlers"):
-                        for handler_meta in getattr(attr, "_skbook_handlers"):
-                            handlers.append((attr, handler_meta))
-
-            if not plugin_instance and not handlers:
-                logger.warning(f"插件 [{name}] 未找到有效的插件类或处理器")
+            if not handlers:
+                logger.warning("插件 [%s] 未找到有效的命令或消息处理器", name)
                 return
 
             pi = PluginInfo(name, module, plugin_instance, handlers)
             self._plugins[name] = pi
 
-            # 调用插件 on_load
+            # 调用插件 on_load 生命周期
             if plugin_instance and hasattr(plugin_instance, "on_load"):
-                await plugin_instance.on_load()
+                try:
+                    await plugin_instance.on_load()
+                except Exception as e:
+                    logger.error("插件 [%s] on_load 错误: %s", name, e)
 
-            logger.info(f"插件 [{name}] 已加载 ({len(handlers)} 个处理器)")
+            logger.info("插件 [%s] 已加载 (%d 个处理器)",
+                        name, len(handlers))
 
         except Exception as e:
-            logger.error(f"插件 [{name}] 加载失败: {e}", exc_info=True)
+            logger.error("插件 [%s] 加载失败: %s", name, e, exc_info=True)
 
     async def unload_plugin(self, name: str) -> bool:
         """卸载插件"""
@@ -140,29 +153,35 @@ class PluginManager:
         try:
             if pi.instance and hasattr(pi.instance, "on_unload"):
                 await pi.instance.on_unload()
-            logger.info(f"插件 [{name}] 已卸载")
+            logger.info("插件 [%s] 已卸载", name)
             return True
         except Exception as e:
-            logger.error(f"插件 [{name}] 卸载失败: {e}")
+            logger.error("插件 [%s] 卸载失败: %s", name, e)
             return False
 
     async def reload_plugin(self, name: str) -> bool:
         """重载插件"""
         await self.unload_plugin(name)
-        # 移除模块缓存
+
+        # 清除模块缓存
         for key in list(sys.modules.keys()):
             if key.startswith(f"plugin_{name}"):
                 del sys.modules[key]
-        # 重新加载
+
+        # 重新搜索并加载
         for plugin_dir in self.get_plugin_dirs():
+            # 检查独立文件: plugins/<name>.py
             main_file = plugin_dir / f"{name}.py"
-            dir_main = plugin_dir / name / "main.py"
             if main_file.exists():
                 await self._load_plugin(name, str(main_file))
-                return True
-            elif dir_main.exists():
+                return name in self._plugins
+
+            # 检查目录: plugins/<name>/main.py
+            dir_main = plugin_dir / name / "main.py"
+            if dir_main.exists():
                 await self._load_plugin(name, str(dir_main))
-                return True
+                return name in self._plugins
+
         return False
 
     async def dispatch(self, event: MessageEvent) -> None:
@@ -183,7 +202,7 @@ class PluginManager:
                             await handler_func(event)
 
                     elif handler_type == "message":
-                        # 消息匹配
+                        # 消息模式匹配
                         pattern = meta.get("pattern")
                         if pattern and pattern.search(event.content):
                             await handler_func(event)
@@ -191,11 +210,11 @@ class PluginManager:
                             await handler_func(event)
 
                     elif handler_type == "event":
-                        # 事件匹配（暂未实现具体事件类型）
+                        # 事件匹配（预留）
                         pass
 
                 except Exception as e:
-                    logger.error(f"插件处理器错误 ({pi.name}): {e}")
+                    logger.error("插件 [%s] 处理器错误: %s", pi.name, e)
 
     def get_plugin_list(self) -> List[dict]:
         """获取插件列表（用于 Web 面板）"""
@@ -211,7 +230,10 @@ class PluginManager:
                     item["aliases"] = meta.get("aliases", [])
                 elif meta.get("type") == "message":
                     pattern = meta.get("pattern")
-                    item["pattern"] = str(pattern.pattern) if hasattr(pattern, "pattern") else str(pattern) if pattern else ""
+                    item["pattern"] = (
+                        str(pattern.pattern) if hasattr(pattern, "pattern")
+                        else str(pattern) if pattern else ""
+                    )
                 handler_list.append(item)
 
             result.append({

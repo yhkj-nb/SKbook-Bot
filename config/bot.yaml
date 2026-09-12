@@ -1,0 +1,7 @@
+bots:
+  - name: "云痕科技"
+    token: "test-token-here"
+    enabled: true
+    communities: []
+    poll_interval: 3
+    command_prefix: "/"

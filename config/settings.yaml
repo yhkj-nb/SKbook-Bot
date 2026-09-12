@@ -1,0 +1,13 @@
+server:
+  host: "0.0.0.0"
+  port: 5200
+web:
+  admin_password: "admin123"
+  enabled: true
+logging:
+  level: "INFO"
+  file: ""
+database:
+  path: "./data/skbookbot.db"
+services:
+  config_watcher: true
