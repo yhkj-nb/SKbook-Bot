@@ -12,9 +12,11 @@ logs/
 # Web build (keep in repo so users can access panel without building)
 # web/
 
+# Frontend source moved to SKbook-Bot-Web repo
+frontend/
+
 # Node
 node_modules/
-frontend/node_modules/
 
 # IDE
 .idea/

@@ -2,7 +2,7 @@
 
 import os
 import yaml
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from pathlib import Path
 
 
@@ -23,8 +23,8 @@ class Config:
         self._config_dir = path.parent
         return data
 
-    def load_bot_config(self, path: str) -> Dict[str, Any]:
-        """加载机器人配置"""
+    def load_bot_config(self, path: str) -> List[dict]:
+        """加载机器人配置（从 bot.yaml 读取 bots 列表）"""
         data = self.load_yaml(path)
         self._data["bots"] = data.get("bots", [])
         return self._data["bots"]
@@ -63,6 +63,34 @@ class Config:
             target = target[k]
         target[keys[-1]] = value
 
+    def get_settings_dict(self) -> Dict[str, Any]:
+        """返回只包含 settings 相关配置的 dict（不含 bots 段）"""
+        result = {}
+        settings_keys = {"server", "web", "oauth2", "logging", "database", "data_dir", "services"}
+        for key in settings_keys:
+            val = self._data.get(key)
+            if val is not None:
+                result[key] = val
+        return result
+
+    def save_settings(self, path: Optional[str] = None) -> None:
+        """将 settings 配置（不含 bots）写回 settings.yaml"""
+        if path is None:
+            path = str(self._config_dir / "settings.yaml") if self._config_dir else "config/settings.yaml"
+        data = self.get_settings_dict()
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
+
+    def save_bots(self, path: Optional[str] = None) -> None:
+        """将 bots 配置写回 bot.yaml"""
+        if path is None:
+            path = str(self._config_dir / "bot.yaml") if self._config_dir else "config/bot.yaml"
+        data = {"bots": self._data.get("bots", [])}
+        # 确保目录存在
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
+
     @property
     def data(self) -> Dict[str, Any]:
         return self._data
@@ -78,6 +106,10 @@ class Config:
     def get_bots(self) -> list:
         """获取所有机器人配置"""
         return self._data.get("bots", [])
+
+    def set_bots(self, bots: list) -> None:
+        """设置机器人列表"""
+        self._data["bots"] = bots
 
     def __repr__(self) -> str:
         return f"Config({len(self._data)} keys)"

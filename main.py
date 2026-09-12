@@ -34,10 +34,6 @@ async def main():
     if settings_path.exists():
         config.load_settings(str(settings_path))
         logger.info("已加载 settings.yaml")
-        # 环境变量可以覆盖部分配置（如端口、日志级别），但不覆盖密码
-        config.set("server.host", os.environ.get("WEB_HOST", config.get("server.host", "0.0.0.0")))
-        config.set("server.port", int(os.environ.get("WEB_PORT", str(config.get("server.port", 5200)))))
-        config.set("logging.level", os.environ.get("LOG_LEVEL", config.get("logging.level", "INFO")))
     else:
         # 使用默认配置
         config.set("server.host", os.environ.get("WEB_HOST", "0.0.0.0"))
