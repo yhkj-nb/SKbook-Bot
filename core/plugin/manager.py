@@ -203,7 +203,7 @@ class PluginManager:
         for name, pi in self._plugins.items():
             handler_list = []
             for handler_func, meta in pi.handlers:
-                item = {
+                item: dict = {
                     "type": meta.get("type", "message"),
                 }
                 if meta.get("type") == "command":
@@ -212,7 +212,7 @@ class PluginManager:
                 elif meta.get("type") == "message":
                     pattern = meta.get("pattern")
                     item["pattern"] = str(pattern.pattern) if hasattr(pattern, "pattern") else str(pattern) if pattern else ""
-            handler_list.append(item)
+                handler_list.append(item)
 
             result.append({
                 "name": name,
