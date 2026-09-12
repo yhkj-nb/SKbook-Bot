@@ -1,4 +1,4 @@
-"""配置管理 - 加载 YAML 配置与环境变量"""
+"""配置管理 - 加载 YAML 配置"""
 
 import os
 import yaml
@@ -36,9 +36,8 @@ class Config:
         return data
 
     def load_env(self, path: Optional[str] = None) -> None:
-        """加载 .env 文件（可选）"""
-        from dotenv import load_dotenv
-        load_dotenv(path)
+        """(已废弃) 所有配置统一从 settings.yaml / bot.yaml 读取"""
+        pass
 
     def get(self, key: str, default: Any = None) -> Any:
         """通过点号分隔的 key 获取配置值，如 'server.port'"""

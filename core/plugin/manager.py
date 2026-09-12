@@ -201,9 +201,23 @@ class PluginManager:
         """获取插件列表（用于 Web 面板）"""
         result = []
         for name, pi in self._plugins.items():
+            handler_list = []
+            for handler_func, meta in pi.handlers:
+                item = {
+                    "type": meta.get("type", "message"),
+                }
+                if meta.get("type") == "command":
+                    item["command"] = meta.get("name", "")
+                    item["aliases"] = meta.get("aliases", [])
+                elif meta.get("type") == "message":
+                    pattern = meta.get("pattern")
+                    item["pattern"] = str(pattern.pattern) if hasattr(pattern, "pattern") else str(pattern) if pattern else ""
+            handler_list.append(item)
+
             result.append({
                 "name": name,
                 "handlers": len(pi.handlers),
+                "handler_list": handler_list,
                 "has_instance": pi.instance is not None,
             })
         return result

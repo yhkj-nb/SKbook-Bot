@@ -88,6 +88,9 @@ class HttpServer:
         self._app.router.add_get("/api/update/check", self._handle_update_check)
         self._app.router.add_get("/api/update/version", self._handle_get_version)
 
+        # 日志查看
+        self._app.router.add_get("/api/logs", self._handle_get_logs)
+
         # 静态文件 + SPA 兜底（匹配所有非 API 的 GET 请求）
         self._app.router.add_get("/{tail:.*}", self._handle_static_or_spa)
 
@@ -641,6 +644,60 @@ class HttpServer:
                 "update_time": "2026-01-01",
             }
         })
+
+    # --- 日志查看 ---
+
+    async def _handle_get_logs(self, request: web.Request) -> web.Response:
+        """获取日志内容（支持 ?lines=N 尾随）"""
+        if not self._check_auth(request):
+            return web.json_response({"success": False, "message": "未认证"}, status=401)
+
+        lines = request.query.get("lines", "100")
+        try:
+            lines = int(lines)
+            if lines < 1:
+                lines = 100
+            if lines > 1000:
+                lines = 1000
+        except ValueError:
+            lines = 100
+
+        log_file = config.get("logging.file", "")
+        if not log_file or not Path(log_file).exists():
+            return web.json_response({
+                "success": True,
+                "data": {
+                    "lines": [],
+                    "total": 0,
+                    "file": log_file,
+                    "message": "日志文件未配置或不存在",
+                }
+            })
+
+        try:
+            with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                all_lines = f.readlines()
+
+            tail = all_lines[-lines:]
+            return web.json_response({
+                "success": True,
+                "data": {
+                    "lines": tail,
+                    "total": len(all_lines),
+                    "count": len(tail),
+                    "file": log_file,
+                }
+            })
+        except Exception as e:
+            return web.json_response({
+                "success": True,
+                "data": {
+                    "lines": [],
+                    "total": 0,
+                    "file": log_file,
+                    "message": f"读取日志失败: {e}",
+                }
+            })
 
     # --- 静态文件 + SPA 兜底 ---
 

@@ -23,47 +23,25 @@ async def main():
     ╚══════════════════════════════════════╝
     """)
 
-    # 加载环境变量
-    env_path = Path(__file__).parent / ".env"
-    if env_path.exists():
-        config.load_env(str(env_path))
-        logger.info("已加载 .env 文件")
-
     # 加载框架配置
     settings_path = Path(__file__).parent / "config" / "settings.yaml"
     if settings_path.exists():
         config.load_settings(str(settings_path))
         logger.info("已加载 settings.yaml")
     else:
-        # 使用默认配置
-        config.set("server.host", os.environ.get("WEB_HOST", "0.0.0.0"))
-        config.set("server.port", int(os.environ.get("WEB_PORT", "5200")))
-        config.set("web.admin_password", os.environ.get("WEB_ADMIN_PASSWORD", "admin123"))
-        config.set("logging.level", os.environ.get("LOG_LEVEL", "INFO"))
-        config.set("database.path", os.environ.get("DATA_DIR", "./data") + "/skbookbot.db")
-        config.set("oauth2.client_id", os.environ.get("OAUTH2_CLIENT_ID", ""))
-        config.set("oauth2.client_secret", os.environ.get("OAUTH2_CLIENT_SECRET", ""))
-        config.set("oauth2.redirect_uri", os.environ.get("OAUTH2_REDIRECT_URI", ""))
-        logger.info("使用环境变量配置")
+        # 使用默认配置（首次运行自动创建）
+        config.set("server.host", "0.0.0.0")
+        config.set("server.port", 5200)
+        config.set("web.admin_password", "admin123")
+        config.set("logging.level", "INFO")
+        config.set("database.path", "./data/skbookbot.db")
+        logger.info("使用默认配置")
 
     # 加载机器人配置
     bot_path = Path(__file__).parent / "config" / "bot.yaml"
     if bot_path.exists():
         config.load_bot_config(str(bot_path))
         logger.info("已加载 bot.yaml")
-    else:
-        # 尝试从环境变量加载默认机器人
-        bot_token = os.environ.get("BOT_TOKEN", "")
-        if bot_token:
-            config.set("bots", [{
-                "name": "default",
-                "token": bot_token,
-                "enabled": True,
-                "communities": [],
-                "poll_interval": 3,
-                "command_prefix": "/",
-            }])
-            logger.info("从环境变量加载默认机器人")
 
     # 初始化日志
     log_level = config.get("logging.level", "INFO")
