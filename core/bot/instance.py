@@ -2,7 +2,8 @@
 
 每个实例对应一个 SkBook 机器人 TOKEN，独立轮询消息。
 启动流程：
-  1. 配置 TOKEN → 2. 验证社区权限(get_channels) → 3. 发现频道 → 4. 轮询消息
+  1. 配置 TOKEN → 2. 校验 TOKEN 并拉取机器人信息(get_bot_info) →
+  3. 验证社区权限(get_channels) → 4. 发现频道 → 5. 轮询消息
 """
 
 import asyncio
@@ -46,6 +47,11 @@ class BotInstance:
         self.api = SkBookAPIClient(token)
         self.sender = MessageSender(self.api)
 
+        # 机器人自身信息（启动后由 get_bot_info 填充）
+        self._bot_info: Optional[Dict[str, Any]] = None
+        self._bot_user_id: int = 0
+        self._default_community_id: str = ""
+
         # 从配置读取参数
         self._communities: List[str] = self._config.get("communities", []) or []
         self._poll_interval: int = max(1, self._config.get("poll_interval", 3))
@@ -71,6 +77,21 @@ class BotInstance:
     @property
     def command_prefix(self) -> str:
         return self._command_prefix
+
+    @property
+    def bot_info(self) -> Optional[Dict[str, Any]]:
+        """机器人自身信息（get_bot_info 返回）"""
+        return self._bot_info
+
+    @property
+    def bot_user_id(self) -> int:
+        """机器人自身用户 ID（用于私信/消息去重，区分机器人自己发送的消息）"""
+        return self._bot_user_id
+
+    @property
+    def default_community_id(self) -> str:
+        """默认社区 ID（取授权社区列表第一个，供私信发送校验关系使用）"""
+        return self._default_community_id
 
     # ---- 处理器管理 ----
 
@@ -102,6 +123,10 @@ class BotInstance:
             return
 
         self._running = True
+
+        # 启动前置：校验 TOKEN 并拉取机器人信息（失败不影响后续轮询）
+        await self.fetch_bot_info()
+
         self._task = asyncio.create_task(self._poll_loop())
         logger.info("机器人 [%s] 已启动 (轮询间隔 %ds, 社区: %s)",
                      self.name, self._poll_interval,
@@ -125,6 +150,42 @@ class BotInstance:
         """重启机器人"""
         await self.stop()
         await self.start()
+
+    async def fetch_bot_info(self) -> bool:
+        """启动时拉取机器人自身信息与授权社区
+
+        调用 v1 新增的 get_bot_info 接口校验 TOKEN 有效性，
+        并记录 bot_id 与默认社区（供私信等功能使用）。
+        失败时仅记录警告，不影响后续轮询（轮询会自行暴露权限错误）。
+        """
+        try:
+            info = await self.api.get_bot_info()
+        except SkBookAPIError as e:
+            logger.warning("机器人 [%s] 获取机器人信息失败: %s", self.name, e.text)
+            return False
+        except Exception as e:
+            logger.warning("机器人 [%s] 获取机器人信息异常: %s", self.name, e)
+            return False
+
+        self._bot_info = info
+        bot = info.get("bot", {}) or {}
+        try:
+            self._bot_user_id = int(bot.get("bot_id", 0) or 0)
+        except (TypeError, ValueError):
+            self._bot_user_id = 0
+
+        communities = info.get("communities", []) or []
+        if communities:
+            self._default_community_id = str(communities[0].get("community_id", ""))
+
+        logger.info(
+            "机器人 [%s] 已连接：%s（bot_id=%s，授权社区 %d 个）",
+            self.name,
+            bot.get("name", ""),
+            self._bot_user_id,
+            len(communities),
+        )
+        return True
 
     # ---- 消息轮询主循环 ----
 
