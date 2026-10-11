@@ -1,9 +1,12 @@
 """SkBook 开放平台 API 客户端
 
-严格依据 SkBook 开放平台 API 文档实现。
+严格依据 SkBook 开放平台 API 文档（v1 新域名）实现。
 所有接口调用方式、参数、错误码均精确映射文档。
 
-文档来源：https://skbook.sk26.cn/open/docs.php
+文档来源：https://skbookv1.sk68.top/open/docs.php
+（v1 变更：域名由 skbook.sk26.cn 更换为 skbookv1.sk68.top；
+ 新增「获取机器人信息」「获取私信消息」两个接口；
+ send_channel_message 路径末尾带斜杠）
 """
 
 import asyncio
@@ -18,7 +21,6 @@ from ..base.logger import logger
 
 # ============================================================
 # 错误码映射（精确对齐 API 文档错误码表）
-# ============================================================
 ERROR_CODE_MAP: Dict[int, str] = {
     0: "成功",
     # 4xxxx — 请求参数错误
@@ -98,20 +100,18 @@ class SkBookAPIError(Exception):
         return self.code in (50000,) or self.code >= 50000
 
 
-# ============================================================
 # SkBook API 客户端
-# ============================================================
 class SkBookAPIClient:
     """SkBook 开放平台 API 客户端
 
-    按照 API 文档封装所有机器人 Open API 接口。
+    按照 API 文档（v1）封装所有机器人 Open API 接口。
     Token 一律通过 URL 查询参数 ?token=<TOKEN> 传递（GET/POST 均可）。
     所有接口均需机器人在对应社区内拥有相应权限。
 
-    基址：https://skbook.sk26.cn/open/api/
+    基址：https://skbookv1.sk68.top/open/api/
     """
 
-    BASE_URL = "https://skbook.sk26.cn/open/api/"
+    BASE_URL = "https://skbookv1.sk68.top/open/api/"
     REQUEST_TIMEOUT = 30.0
     CONNECT_TIMEOUT = 10.0
     MAX_RETRIES = 3
@@ -250,8 +250,33 @@ class SkBookAPIClient:
 
     # ================================================================
     # 机器人 Open API 接口
-    # 文档：https://skbook.sk26.cn/open/api/
+    # 文档：https://skbookv1.sk68.top/open/api/
     # ================================================================
+
+    # --- 0. 获取机器人信息（v1 新增） ---
+
+    async def get_bot_info(self) -> Dict[str, Any]:
+        """获取机器人自身信息与已添加的社区列表
+
+        GET /open/api/get_bot_info/
+        无需参数。可用于校验 TOKEN 有效性、查看权限配置与授权状态。
+        已解散的社区不会返回。
+
+        Returns:
+            {
+                "bot": {
+                    "bot_id": int, "name": str, "description": str,
+                    "avatar": str, "permissions": List[str],
+                    "receive_all_messages": bool, "send_authorized": bool,
+                    "message_authorized": bool, "created_at": str
+                },
+                "communities": [
+                    {"community_id": str, "name": str, "channel_scope": str}, ...
+                ]
+            }
+        """
+        result = await self.request("GET", "get_bot_info/")
+        return result.get("data", {})
 
     # --- 1. 获取社区频道列表 ---
 
@@ -336,6 +361,42 @@ class SkBookAPIClient:
             params["message_id"] = str(message_id)
 
         result = await self.request("GET", "get_all_messages/", params=params)
+        return result.get("data", {})
+
+    # --- 3.5 获取私信消息（v1 新增） ---
+
+    async def get_dm_messages(
+        self,
+        limit: int = 20,
+        message_id: Optional[int] = None,
+        user_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """获取机器人收到的私信消息
+
+        GET /open/api/get_dm_messages/
+        不携带 user_id 时返回所有会话的私信消息流；
+        携带 user_id 时仅返回机器人与该用户的会话消息。
+        需管理员在后台「机器人获取消息白名单」中添加该机器人ID。
+        包含机器人自己发送与用户发送的私信消息；已撤回的消息不会返回。
+
+        Args:
+            limit: 获取数量（1-100，默认20）
+            message_id: 定位消息ID，携带后只返回这条消息之后的新消息
+            user_id: 对方用户ID（可选），携带后仅返回与该用户的会话消息
+
+        Returns:
+            {"messages": [...], "has_more": bool}
+            消息含 user_id、message_id、content、sender_id、created_at
+        """
+        params: Dict[str, str] = {
+            "limit": str(max(1, min(limit, 100))),
+        }
+        if message_id is not None:
+            params["message_id"] = str(message_id)
+        if user_id is not None:
+            params["user_id"] = str(user_id)
+
+        result = await self.request("GET", "get_dm_messages/", params=params)
         return result.get("data", {})
 
     # --- 4. 发送社区频道消息 ---
@@ -458,10 +519,8 @@ class SkBookAPIClient:
         return result.get("data", {})
 
 
-# ============================================================
 # OAuth2.0 客户端
-# 文档：https://skbook.sk26.cn/open/api/oauth2/
-# ============================================================
+# 文档：https://skbookv1.sk68.top/open/api/oauth2/
 
 class OAuth2Client:
     """SkBook OAuth2.0 客户端
@@ -470,8 +529,8 @@ class OAuth2Client:
     经过完整 OAuth2.0 流程后可获取用户信息。
     """
 
-    AUTH_URL = "https://skbook.sk26.cn/open/oauth_authorize.php"
-    API_URL = "https://skbook.sk26.cn/open/api/oauth2/"
+    AUTH_URL = "https://skbookv1.sk68.top/open/oauth_authorize.php"
+    API_URL = "https://skbookv1.sk68.top/open/api/oauth2/"
 
     def __init__(
         self,
