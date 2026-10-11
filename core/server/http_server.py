@@ -73,6 +73,10 @@ class HttpServer:
         self._app.router.add_get("/api/messages", self._handle_get_messages)
         self._app.router.add_post("/api/messages/send", self._handle_send_message)
 
+        # 机器人信息 / 私信（v1 新增）
+        self._app.router.add_get("/api/bot-info", self._handle_bot_info)
+        self._app.router.add_get("/api/dm-messages", self._handle_dm_messages)
+
         # 插件管理
         self._app.router.add_get("/api/plugins", self._handle_get_plugins)
         self._app.router.add_post("/api/plugins/{name}/reload", self._handle_reload_plugin)
@@ -274,6 +278,9 @@ class HttpServer:
                 "communities": bot._communities if hasattr(bot, "_communities") else [],
                 "poll_interval": bot._poll_interval if hasattr(bot, "_poll_interval") else 3,
                 "command_prefix": bot.command_prefix,
+                "bot_user_id": bot.bot_user_id,
+                "default_community_id": bot.default_community_id,
+                "bot_name": bot.bot_info.get("bot", {}).get("name", "") if bot.bot_info else "",
             })
 
         return web.json_response({"success": True, "data": {"bots": bots}})
@@ -424,6 +431,74 @@ class HttpServer:
 
         success = await bot.sender.send_channel(community_id, int(channel_id), content)
         return web.json_response({"success": success})
+
+    # --- 机器人信息 / 私信（v1 新增） ---
+
+    async def _handle_bot_info(self, request: web.Request) -> web.Response:
+        """获取机器人自身信息与授权社区（v1 get_bot_info）
+
+        可用于面板展示机器人身份、权限与已授权社区，
+        也可用于校验当前 Token 是否有效。
+        """
+        if not self._check_auth(request):
+            return web.json_response({"success": False, "message": "未认证"}, status=401)
+
+        bot_name = request.query.get("bot_name", "")
+        app = get_app()
+        if not app:
+            return web.json_response({"success": False, "message": "应用未初始化"}, status=500)
+
+        bot = app.bot_registry.get(bot_name) if bot_name else app.bot_registry.list_active()[0]
+        if not bot:
+            return web.json_response({"success": False, "message": "未找到可用机器人"}, status=404)
+
+        try:
+            info = await bot.api.get_bot_info()
+            return web.json_response({"success": True, "data": info})
+        except SkBookAPIError as e:
+            return web.json_response({"success": False, "message": e.text}, status=400)
+        except Exception as e:
+            return web.json_response({"success": False, "message": str(e)}, status=400)
+
+    async def _handle_dm_messages(self, request: web.Request) -> web.Response:
+        """获取机器人私信消息（v1 get_dm_messages）
+
+        不携带 user_id 时返回所有会话的私信消息流；
+        携带 user_id 时仅返回与该用户的会话消息。
+        """
+        if not self._check_auth(request):
+            return web.json_response({"success": False, "message": "未认证"}, status=401)
+
+        bot_name = request.query.get("bot_name", "")
+        user_id_raw = request.query.get("user_id", "")
+        limit_raw = request.query.get("limit", "20")
+        message_id_raw = request.query.get("message_id", "")
+
+        try:
+            limit = max(1, min(int(limit_raw), 100))
+        except ValueError:
+            limit = 20
+
+        user_id = int(user_id_raw) if user_id_raw.isdigit() else None
+        message_id = int(message_id_raw) if message_id_raw.isdigit() else None
+
+        app = get_app()
+        if not app:
+            return web.json_response({"success": False, "message": "应用未初始化"}, status=500)
+
+        bot = app.bot_registry.get(bot_name) if bot_name else app.bot_registry.list_active()[0]
+        if not bot:
+            return web.json_response({"success": False, "message": "未找到可用机器人"}, status=404)
+
+        try:
+            data = await bot.api.get_dm_messages(
+                limit=limit, message_id=message_id, user_id=user_id,
+            )
+            return web.json_response({"success": True, "data": data})
+        except SkBookAPIError as e:
+            return web.json_response({"success": False, "message": e.text}, status=400)
+        except Exception as e:
+            return web.json_response({"success": False, "message": str(e)}, status=400)
 
     # --- 插件管理 ---
 
