@@ -10,7 +10,10 @@
 
 ## 概览
 
-SkBookBot 是一个专为 [SkBook 开放平台](https://skbook.sk26.cn) 设计的机器人框架，对标 ElainaBot_v2 的架构设计，提供完整的机器人生命周期管理、插件系统和可视化面板。
+SkBookBot 是一个专为 [SkBook 开放平台](https://skbookv1.sk68.top) 设计的机器人框架，对标 ElainaBot_v2 的架构设计，提供完整的机器人生命周期管理、插件系统和可视化面板。
+
+> API 文档（v1 新域名）：<https://skbookv1.sk68.top/open/docs.php>
+> 旧域名 `skbook.sk26.cn` 已停用，框架已全面迁移至 `skbookv1.sk68.top`。
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -24,7 +27,7 @@ SkBookBot 是一个专为 [SkBook 开放平台](https://skbook.sk26.cn) 设计�
 │  │ API 封装 │  │ 上下文    │  │ 密码 / OAuth2 登录│  │
 │  └─────────┘  └──────────┘  └───────────────────┘  │
 │  ┌──────────────────────────────────────────────┐   │
-│  │       SkBook 开放平台 API                          │
+│  │       SkBook 开放平台 API (v1)                    │
 │  └──────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
 ```
@@ -60,6 +63,7 @@ SkBookBot/
 ### 多机器人管理
 - 支持同时运行多个机器人，独立配置 Token、社区、命令前缀
 - 自动轮询 SkBook 频道消息，支持社区粒度或全局模式
+- 启动时自动校验 Token 有效性并拉取机器人信息与授权社区
 - 运行时动态添加/删除/重启机器人
 
 ### 插件系统
@@ -152,7 +156,7 @@ bots:
 ### 2. OAuth2 登录
 1. 在 SkBook 应用设置页开启 OAuth2，填写回调地址
 2. 在 `.env` 中配置 `OAUTH2_CLIENT_ID` 和 `OAUTH2_CLIENT_SECRET`
-3. 登录页选择「SkBook 账号授权」，跳转至 SkBook 授权页
+3. 登录页选择「SkBook 账号授权」，跳转至 SkBook 授权页（<https://skbookv1.sk68.top/open/oauth_authorize.php>）
 4. 授权成功后获取用户信息（名称、头像、ID、手机号）
 
 ## 插件开发
@@ -181,13 +185,15 @@ class HelloPlugin:
 
 ## API 概览
 
-框架封装了 SkBook 开放平台的全部接口：
+框架封装了 SkBook 开放平台（v1）的全部接口：
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
+| `get_bot_info/` | GET | 获取机器人自身信息与已添加的社区列表（v1 新增） |
 | `get_channels/` | GET | 获取社区频道列表 |
 | `get_messages/` | GET | 获取频道消息 |
 | `get_all_messages/` | GET | 获取所有社区消息 |
+| `get_dm_messages/` | GET | 获取私信消息（v1 新增） |
 | `send_channel_message/` | POST | 发送频道消息 |
 | `send_dm_message/` | POST | 发送私信 |
 | `mute_user/` | POST | 禁言用户 |
@@ -203,6 +209,8 @@ class HelloPlugin:
 | 40101 | Token 无效 |
 | 40301 | 机器人未添加到社区 |
 | 50000 | 服务器内部错误 |
+
+> 完整错误码（含 OAuth2 / 权限细分）见 `core/network/api_client.py` 中的 `ERROR_CODE_MAP`。
 
 ## 项目参考
 
