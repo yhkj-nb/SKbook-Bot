@@ -120,6 +120,18 @@ python3 main.py
 docker compose up -d
 ```
 
+## 前端面板构建
+
+Web 管理面板的 **Vue 3 源码位于 `frontend/`**（Vite 工程），构建产物输出到 `web/`，由 `core/server/http_server.py` 直接托管（并已保留在仓库中，用户无需自行构建即可访问面板）。
+
+```bash
+cd frontend
+npm install
+npm run build      # 产物输出至 ../web
+```
+
+> 源已从独立仓库 `SKbook-Bot-Web` 回迁到本仓库的 `frontend/`。修改 `frontend/` 后需重新执行 `npm run build`，改动才会反映到 `web/` 与线上面板。
+
 ## 配置说明
 
 ### 环境变量 (.env)
