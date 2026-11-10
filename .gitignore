@@ -9,11 +9,8 @@ venv/
 data/
 logs/
 
-# Web build (keep in repo so users can access panel without building)
+# Web 构建产物（保留在仓库中，用户无需自行构建即可访问面板）
 # web/
-
-# Frontend source moved to SKbook-Bot-Web repo
-frontend/
 
 # Node
 node_modules/
