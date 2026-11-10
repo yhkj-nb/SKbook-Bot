@@ -1,5 +1,7 @@
 # SkBookBot
 
+> ⚠️ **本项目已停止维护，仓库已归档（只读）** — 自 2026-11-10 起不再更新、不再处理 Issue / PR。详见 [NO_LONGER_MAINTAINED.md](NO_LONGER_MAINTAINED.md)。
+
 > SkBook 开放平台机器人框架 — 基于 Python 的多机器人管理框架，支持插件热重载与 Web 管理面板。
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://python.org)
