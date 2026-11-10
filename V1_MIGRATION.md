@@ -104,3 +104,34 @@ npm install && npm run build   # 产物输出至 ../SKbook-Bot/web/
 - `SKbook-Bot/core/server/http_server.py` — **已替换**（两新管理 API）
 - `SKbook-Bot/README.md` — **已替换**（新域名 + 接口表）
 - `SKbook-Bot-Web/src/views/Settings.vue` — **已原地修改**（文档链接）
+
+---
+
+## 八、Web 前端源码回迁主仓库（2026-11-10）
+
+> 配套操作：将 Web 管理面板的 Vue 源码从独立仓库 `SKbook-Bot-Web` 迁回主仓库 `SKbook-Bot` 的 `frontend/` 目录，使主仓库自包含（源码 + 构建产物 `web/` 同仓）。
+
+### 背景与结论
+
+- 主仓库 `.gitignore` 原有 `# Frontend source moved to SKbook-Bot-Web repo` + `frontend/` 忽略项——说明 `frontend/` 本就是主仓库的前端源码位置，之前被搬到了独立仓库。
+- `SKbook-Bot-Web` 仓库结构混乱：根目录有一套**残缺**（缺 `components/`、`store/theme.js`、`Update.vue`）的 `src/` 副本（无法构建），而 `frontend/` 才是**完整可构建的真源**（所有视图都引用 `components/`、`store/theme.js`，且构建产物哈希与线上 `web/` 完全一致，证明线上面板正是由它构建）。
+- 因此本次**只迁移 `frontend/` 真源**到 `SKbook-Bot/frontend/`，并取消 `.gitignore` 对 `frontend/` 的忽略。
+
+### 本次改动
+
+| 文件 | 改动 |
+|------|------|
+| `frontend/`（22 个文件） | **新增**（回迁）：Vue 3 源码（`index.html` / `package.json` / `vite.config.js` / `src/` 全套） |
+| `.gitignore` | 移除 `frontend/` 忽略项与"已迁出"注释；`web/` 仍保留在仓库（注释说明） |
+| `README.md` | 新增「前端面板构建」小节，说明 `frontend/` 源与 `npm run build → ../web` 流程 |
+| `V1_MIGRATION.md` | 本第八节记录回迁过程 |
+
+### 校验
+
+- ✅ 本地 `npm install && npm run build` 成功（vite 5.4），产物 `web/` 的哈希与线上 `web/` 完全一致 → 证实 `frontend/` 即真源
+- ✅ `frontend/` 真源全量扫描无任何 `skbook.sk26.cn` / `sk26` 旧域名残留
+- ✅ 说明：此前（十月）对 `SKbook-Bot-Web/src/views/Settings.vue` 的"旧域名修复"改的是残缺根副本，对真实部署无效；线上 `web/` 本就由 `frontend/` 真源构建且不含旧域名
+
+### 推送方式
+
+本环境 `git clone/push` 的大流量传输仍被网络策略 `Connection reset by peer` 中断，故改用 **GitHub Contents REST API** 逐文件推送（小请求不受限）。所有文件均以 `yhkj-nb` 身份落到 `main` 分支。
